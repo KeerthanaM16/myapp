@@ -1,0 +1,130 @@
+name: CI/CD Workflow for React App
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint_and_test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+      
+      - name: Lint code
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+  deploy_to_netlify:
+    name: Deploy to Netlify
+    runs-on: ubuntu-latest
+    needs: lint_and_test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Build React app
+        run: npm run build
+      
+      - name: Deploy to Netlify
+        uses: netlify/actions/cli@v1
+        with:
+          args: deploy --prod --dir=build
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+
+# Error handling
+on:
+  workflow_run:
+    workflows: ["CI/CD Workflow for React App"]
+    types:
+      - completed
+
+jobs:
+  notify_on_failure:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - name: Send failure notification
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const run = github.event.workflow_run;
+            const repo = run.repository.full_name;
+            const workflow = run.name;
+            const actor = run.head_commit.author.name;
+            const branch = run.head_branch;
+            const runURL = run.html_url;
+            github.issues.create({
+              repo: repo,
+              title: `CI/CD Workflow Failed: ${workflow} on ${branch}`,
+              body: `CI/CD Workflow [failed](${runURL}) triggered by ${actor} on branch ${branch}.`
+            });
+
+# Security measures
+jobs:
+  lint_and_test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      - name: Install dependencies securely
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Lint code with ESLint
+        run: npm run lint
+
+      - name: Run tests with Jest
+        run: npm test
+
+# Performance optimization
+jobs:
+  lint_and_test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      - name: Install dependencies securely
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Lint code with ESLint
+        run: npm run lint
+
+      - name: Run tests with Jest
+        run: npm test
+
+      - name: Optimize build for production
+        run: npm run build -- --prod
+
+      - name: Analyze bundle size
+        run: npm run analyze
